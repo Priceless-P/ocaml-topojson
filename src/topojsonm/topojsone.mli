@@ -15,16 +15,19 @@
 *)
 
 (** A library for manipulating large TopoJson documents without reading the
-    whole document into memory using the {!Jsonm} streaming, JSON parser. *)
+    whole document into memory using the {!Jsone} streaming, JSON parser. *)
+
+module Jsone = Geojsone.Jsone
+module Ezjsone = Geojsone.Ezjsone
 
 module Err : sig
   type location = (int * int) * (int * int)
-  type t = [ `Error of location * Jsonm.error | `EOI | `Unexpected of string ]
+  type t = [ `Error of location * Jsone.error | `EOI | `Unexpected of string ]
 
   val pp : Format.formatter -> t -> unit
 end
 
-module Topo : Topojson.S with type json = Ezjsonm.value
+module Topo : Topojson.S with type json = Ezjsone.value
 
 (** {2 Maps}
 
@@ -34,17 +37,17 @@ module Topo : Topojson.S with type json = Ezjsonm.value
 
 val map_object :
   (string * Topo.Geometry.t -> string * Topo.Geometry.t) ->
-  Jsonm.src ->
-  Jsonm.dst ->
+  Jsone.src ->
+  Jsone.dst ->
   (unit, Err.t) result
-(** [map_object f src dst] will apply [f] to all TopoJson objects. This is
-    essentially any
-    {{:https://datatracker.ietf.org/doc/html/rfc7946#section-3.1} geometry
-    object}.
+(** [map_object f src dst] will apply [f] to all TopoJson objects. The map will
+    recurse into TopoJson Object. Note for the moment if you have a single
+    geometry object as your document, this will not work. *)
 
-    The map will recurse into geometry collections. Note for the moment if you
-    have a single geometry object as your document, this will not work. *)
-
-module Ezjsonm = Ezjsonm
-module Jsonm = Jsonm
-module Uutf = Uutf
+val fold_object :
+  ('acc -> string * Topo.Geometry.t -> 'acc) ->
+  'acc ->
+  Jsone.src ->
+  ('acc, Err.t) result
+(** [fold_object f initial_acc src] is much like {!map_object} but allows you to
+    accumulate some result that is then returned to you. *)
